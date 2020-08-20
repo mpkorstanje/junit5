@@ -98,6 +98,15 @@ class CsvArgumentsProviderTests {
 	}
 
 	@Test
+	void doesNotTrimSpacesInsideQuotes() {
+		CsvSource annotation = csvSource("''", "'   '", "'blank '", "' not blank   '");
+
+		Stream<Object[]> arguments = provideArguments(annotation);
+
+		assertThat(arguments).containsExactly(array(""), array("   "), array("blank "), array(" not blank   "));
+	}
+
+	@Test
 	void providesArgumentsWithCharacterDelimiter() {
 		CsvSource annotation = csvSource().delimiter('|').lines("foo|bar", "bar|foo").build();
 
@@ -159,6 +168,57 @@ class CsvArgumentsProviderTests {
 		Stream<Object[]> arguments = provideArguments(annotation);
 
 		assertThat(arguments).containsExactly(new Object[][] { { "", "" }, { null, null } });
+	}
+
+	@Test
+	void throwsExceptionIfSourceExceedsMaxCharsPerColumnConfig() {
+		CsvSource annotation = csvSource().lines("413").maxCharsPerColumn(2).build();
+
+		Stream<Object[]> arguments = provideArguments(annotation);
+
+		assertThatExceptionOfType(CsvParsingException.class)//
+				.isThrownBy(() -> arguments.toArray())//
+				.withMessageStartingWith("Failed to parse CSV input configured via Mock for CsvSource")//
+				.withRootCauseInstanceOf(ArrayIndexOutOfBoundsException.class);
+	}
+
+	@Test
+	void providesArgumentWithDefaultMaxCharsPerColumnConfig() {
+		CsvSource annotation = csvSource().lines("0".repeat(4096)).delimiter(';').build();
+
+		Stream<Object[]> arguments = provideArguments(annotation);
+
+		assertThat(arguments.toArray()).hasSize(1);
+	}
+
+	@Test
+	void throwsExceptionWhenSourceExceedsDefaultMaxCharsPerColumnConfig() {
+		CsvSource annotation = csvSource().lines("0".repeat(4097)).delimiter(';').build();
+
+		Stream<Object[]> arguments = provideArguments(annotation);
+
+		assertThatExceptionOfType(CsvParsingException.class)//
+				.isThrownBy(() -> arguments.toArray())//
+				.withMessageStartingWith("Failed to parse CSV input configured via Mock for CsvSource")//
+				.withRootCauseInstanceOf(ArrayIndexOutOfBoundsException.class);
+	}
+
+	@Test
+	void providesArgumentsForExceedsSourceWithCustomMaxCharsPerColumnConfig() {
+		CsvSource annotation = csvSource().lines("0".repeat(4097)).delimiter(';').maxCharsPerColumn(4097).build();
+
+		Stream<Object[]> arguments = provideArguments(annotation);
+
+		assertThat(arguments.toArray()).hasSize(1);
+	}
+
+	@Test
+	void throwsExceptionWhenMaxCharsPerColumnIsNotPositiveNumber() {
+		CsvSource annotation = csvSource().lines("41").delimiter(';').maxCharsPerColumn(-1).build();
+
+		assertThatExceptionOfType(PreconditionViolationException.class)//
+				.isThrownBy(() -> provideArguments(annotation))//
+				.withMessageStartingWith("maxCharsPerColumn must be a positive number: -1");
 	}
 
 	private Stream<Object[]> provideArguments(CsvSource annotation) {

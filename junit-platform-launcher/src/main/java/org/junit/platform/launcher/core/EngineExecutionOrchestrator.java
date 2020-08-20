@@ -46,6 +46,9 @@ public class EngineExecutionOrchestrator {
 	}
 
 	void execute(InternalTestPlan internalTestPlan, TestExecutionListener... listeners) {
+		internalTestPlan.markStarted();
+		LauncherDiscoveryResult discoveryResult = internalTestPlan.getDiscoveryResult();
+		ConfigurationParameters configurationParameters = discoveryResult.getConfigurationParameters();
 		TestExecutionListenerRegistry listenerRegistry = buildListenerRegistryForExecution(listeners);
 		TestExecutionListener listener = listenerRegistry.getCompositeTestExecutionListener();
 		listener.testPlanExecutionStarted(internalTestPlan);

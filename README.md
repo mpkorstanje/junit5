@@ -7,7 +7,7 @@ This repository is the home of the next generation of JUnit, _JUnit 5_.
 ## Latest Releases
 
 - General Availability (GA): [JUnit 5.6.2](https://github.com/junit-team/junit5/releases/tag/r5.6.2) (April 10, 2020)
-- Preview (Milestone/Release Candidate): [JUnit 5.7.0-M1](https://github.com/junit-team/junit5/releases/tag/r5.7.0-M1) (April 19, 2020)
+- Preview (Milestone/Release Candidate): [JUnit 5.7.0-RC1](https://github.com/junit-team/junit5/releases/tag/r5.7.0-RC1) (August 16, 2020)
 
 ## Documentation
 
@@ -86,12 +86,13 @@ See also <https://repo1.maven.org/maven2/org/junit/> for releases and <https://o
 ### JUnit Platform
 
 - **Group ID**: `org.junit.platform`
-- **Version**: `1.6.2`, `1.7.0-M1`, or `1.7.0-SNAPSHOT`
+- **Version**: `1.6.2`, `1.7.0-RC1`, or `1.7.0-SNAPSHOT`
 - **Artifact IDs** and Java **module** name:
   - `junit-platform-commons` (`org.junit.platform.commons`)
   - `junit-platform-console` (`org.junit.platform.console`)
   - `junit-platform-console-standalone` (*N/A*)
   - `junit-platform-engine` (`org.junit.platform.engine`)
+  - `junit-platform-jfr` (`org.junit.platform.jfr`)
   - `junit-platform-launcher` (`org.junit.platform.launcher`)
   - `junit-platform-reporting` (`org.junit.platform.reporting`)
   - `junit-platform-runner` (`org.junit.platform.runner`)
@@ -101,7 +102,7 @@ See also <https://repo1.maven.org/maven2/org/junit/> for releases and <https://o
 ### JUnit Jupiter
 
 - **Group ID**: `org.junit.jupiter`
-- **Version**: `5.6.2`, `5.7.0-M1`, or `5.7.0-SNAPSHOT`
+- **Version**: `5.6.2`, `5.7.0-RC1`, or `5.7.0-SNAPSHOT`
 - **Artifact IDs** and Java **module** name:
   - `junit-jupiter` (`org.junit.jupiter`)
   - `junit-jupiter-api` (`org.junit.jupiter.api`)
@@ -112,7 +113,7 @@ See also <https://repo1.maven.org/maven2/org/junit/> for releases and <https://o
 ### JUnit Vintage
 
 - **Group ID**: `org.junit.vintage`
-- **Version**: `5.6.2`, `5.7.0-M1`, or `5.7.0-SNAPSHOT`
+- **Version**: `5.6.2`, `5.7.0-RC1`, or `5.7.0-SNAPSHOT`
 - **Artifact ID** and Java **module** name:
   - `junit-vintage-engine` (`org.junit.vintage.engine`)
 
@@ -120,7 +121,7 @@ See also <https://repo1.maven.org/maven2/org/junit/> for releases and <https://o
 
 - **Group ID**: `org.junit`
 - **Artifact ID** `junit-bom`
-- **Version**: `5.6.2`, `5.7.0-M1`, or `5.7.0-SNAPSHOT`
+- **Version**: `5.6.2`, `5.7.0-RC1`, or `5.7.0-SNAPSHOT`
 
 
 [Codecov]: https://codecov.io/gh/junit-team/junit5

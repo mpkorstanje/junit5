@@ -10,7 +10,7 @@
 
 package org.junit.platform.engine.support.hierarchical;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,7 +51,7 @@ import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.MethodOrderer.Alphanumeric;
+import org.junit.jupiter.api.MethodOrderer.MethodName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
@@ -62,6 +62,7 @@ import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.platform.engine.TestDescriptor;
 import org.junit.platform.engine.discovery.DiscoverySelectors;
@@ -220,6 +221,129 @@ class ParallelExecutionIntegrationTests {
 		assertThat(ThreadReporter.getThreadNames(getEventsOfChildren(results, testClassB))).hasSize(3);
 		TestDescriptor testClassC = findFirstTestDescriptor(results, container(ParallelMethodsTestCaseC.class));
 		assertThat(ThreadReporter.getThreadNames(getEventsOfChildren(results, testClassC))).hasSize(3);
+	}
+
+	@Test
+	void canRunTestsIsolatedFromEachOther() {
+		var events = executeConcurrently(2, IsolatedTestCase.class);
+
+		assertThat(events.stream().filter(event(test(), finishedWithFailure())::matches)).isEmpty();
+	}
+
+	@Test
+	void canRunTestsIsolatedFromEachOtherWithNestedCases() {
+		var events = executeConcurrently(4, NestedIsolatedTestCase.class);
+
+		assertThat(events.stream().filter(event(test(), finishedWithFailure())::matches)).isEmpty();
+	}
+
+	@Test
+	void canRunTestsIsolatedFromEachOtherAcrossClasses() {
+		var events = executeConcurrently(4, IndependentClasses.A.class, IndependentClasses.B.class);
+
+		assertThat(events.stream().filter(event(test(), finishedWithFailure())::matches)).isEmpty();
+	}
+
+	@Isolated("testing")
+	static class IsolatedTestCase {
+		static AtomicInteger sharedResource;
+		static CountDownLatch countDownLatch;
+
+		@BeforeAll
+		static void initialize() {
+			sharedResource = new AtomicInteger();
+			countDownLatch = new CountDownLatch(2);
+		}
+
+		@Test
+		void a() throws Exception {
+			incrementBlockAndCheck(sharedResource, countDownLatch);
+		}
+
+		@Test
+		void b() throws Exception {
+			storeAndBlockAndCheck(sharedResource, countDownLatch);
+		}
+	}
+
+	static class NestedIsolatedTestCase {
+		static AtomicInteger sharedResource;
+		static CountDownLatch countDownLatch;
+
+		@BeforeAll
+		static void initialize() {
+			sharedResource = new AtomicInteger();
+			countDownLatch = new CountDownLatch(6);
+		}
+
+		@Test
+		void a() throws Exception {
+			storeAndBlockAndCheck(sharedResource, countDownLatch);
+		}
+
+		@Test
+		void b() throws Exception {
+			storeAndBlockAndCheck(sharedResource, countDownLatch);
+		}
+
+		@Nested
+		class Inner {
+
+			@Test
+			void a() throws Exception {
+				storeAndBlockAndCheck(sharedResource, countDownLatch);
+			}
+
+			@Test
+			void b() throws Exception {
+				storeAndBlockAndCheck(sharedResource, countDownLatch);
+			}
+
+			@Nested
+			@Isolated
+			class InnerInner {
+
+				@Test
+				void a() throws Exception {
+					incrementBlockAndCheck(sharedResource, countDownLatch);
+				}
+
+				@Test
+				void b() throws Exception {
+					storeAndBlockAndCheck(sharedResource, countDownLatch);
+				}
+			}
+		}
+	}
+
+	static class IndependentClasses {
+		static AtomicInteger sharedResource = new AtomicInteger();
+		static CountDownLatch countDownLatch = new CountDownLatch(4);
+
+		static class A {
+			@Test
+			void a() throws Exception {
+				storeAndBlockAndCheck(sharedResource, countDownLatch);
+			}
+
+			@Test
+			void b() throws Exception {
+				storeAndBlockAndCheck(sharedResource, countDownLatch);
+			}
+		}
+
+		@Isolated
+		static class B {
+			@Test
+			void a() throws Exception {
+				incrementBlockAndCheck(sharedResource, countDownLatch);
+			}
+
+			@Test
+			void b() throws Exception {
+				storeAndBlockAndCheck(sharedResource, countDownLatch);
+			}
+		}
 	}
 
 	private List<Event> getEventsOfChildren(EngineExecutionResults results, TestDescriptor container) {
@@ -537,7 +661,7 @@ class ParallelExecutionIntegrationTests {
 		}
 	}
 
-	@TestMethodOrder(Alphanumeric.class)
+	@TestMethodOrder(MethodName.class)
 	static class InterruptedThreadTestCase {
 
 		@Test
@@ -643,8 +767,16 @@ class ParallelExecutionIntegrationTests {
 			throws InterruptedException {
 		int value = sharedResource.incrementAndGet();
 		countDownLatch.countDown();
-		countDownLatch.await(1, SECONDS);
+		countDownLatch.await(100, MILLISECONDS);
 		return value;
+	}
+
+	private static void storeAndBlockAndCheck(AtomicInteger sharedResource, CountDownLatch countDownLatch)
+			throws InterruptedException {
+		int value = sharedResource.get();
+		countDownLatch.countDown();
+		countDownLatch.await(100, MILLISECONDS);
+		assertEquals(value, sharedResource.get());
 	}
 
 	static class ThreadReporter implements AfterTestExecutionCallback {

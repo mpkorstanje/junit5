@@ -6,7 +6,7 @@ import java.time.format.DateTimeFormatter
 plugins {
 	id("net.nemerosa.versioning")
 	id("com.github.ben-manes.versions") // gradle dependencyUpdates
-	id("com.diffplug.gradle.spotless")
+	id("com.diffplug.spotless")
 	id("io.spring.nohttp")
 }
 
@@ -46,6 +46,7 @@ val platformProjects by extra(listOf(
 		project(":junit-platform-console"),
 		project(":junit-platform-console-standalone"),
 		project(":junit-platform-engine"),
+		project(":junit-platform-jfr"),
 		project(":junit-platform-launcher"),
 		project(":junit-platform-reporting"),
 		project(":junit-platform-runner"),
@@ -93,7 +94,7 @@ allprojects {
 
 	apply(plugin = "eclipse")
 	apply(plugin = "idea")
-	apply(plugin = "com.diffplug.gradle.spotless")
+	apply(plugin = "com.diffplug.spotless")
 
 	if (enableJaCoCo) {
 		apply(plugin = "jacoco")
