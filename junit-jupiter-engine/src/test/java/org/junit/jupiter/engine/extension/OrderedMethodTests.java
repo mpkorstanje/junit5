@@ -35,7 +35,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.MethodDescriptor;
 import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.MethodOrderer.Alphanumeric;
 import org.junit.jupiter.api.MethodOrderer.MethodName;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.MethodOrderer.Random;
@@ -86,7 +85,7 @@ class OrderedMethodTests {
 		// on the class names.
 		assertThat(testClass.getSuperclass().getName()).isGreaterThan(testClass.getName());
 
-		var tests = executeTestsInParallel(MethodNameTestCase.class);
+		var tests = executeTestsInParallel(testClass);
 
 		tests.assertStatistics(stats -> stats.succeeded(callSequence.size()));
 
@@ -108,7 +107,7 @@ class OrderedMethodTests {
 		// on the class names.
 		assertThat(testClass.getSuperclass().getName()).isLessThan(testClass.getName());
 
-		var tests = executeTestsInParallel(MethodNameTestCase.class);
+		var tests = executeTestsInParallel(testClass);
 
 		tests.assertStatistics(stats -> stats.succeeded(callSequence.size()));
 
@@ -409,7 +408,7 @@ class OrderedMethodTests {
 	}
 
 	@SuppressWarnings("deprecation")
-	@TestMethodOrder(Alphanumeric.class)
+	@TestMethodOrder(org.junit.jupiter.api.MethodOrderer.Alphanumeric.class)
 	static class AlphanumericTestCase extends BaseTestCase {
 
 		@BeforeEach
