@@ -18,13 +18,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       with:
         fetch-depth: 1
     - name: Restore Gradle cache and display toolchains
       uses: ./.github/actions/run-gradle
       with:
-        arguments: --quiet
+        arguments: |
+          --quiet \
+          --configuration-cache
     - name: Build and compare checksums
       shell: bash
       run: |

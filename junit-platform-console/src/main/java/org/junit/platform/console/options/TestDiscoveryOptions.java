@@ -64,11 +64,14 @@ public class TestDiscoveryOptions {
 	private List<String> excludedClassNamePatterns = emptyList();
 	private List<String> includedPackages = emptyList();
 	private List<String> excludedPackages = emptyList();
+	private List<String> includedMethodNamePatterns = emptyList();
+	private List<String> excludedMethodNamePatterns = emptyList();
 	private List<String> includedEngines = emptyList();
 	private List<String> excludedEngines = emptyList();
 	private List<String> includedTagExpressions = emptyList();
 	private List<String> excludedTagExpressions = emptyList();
 
+	private List<String> configurationParametersResources = emptyList();
 	private Map<String, String> configurationParameters = emptyMap();
 
 	public boolean isScanModulepath() {
@@ -234,6 +237,22 @@ public class TestDiscoveryOptions {
 		this.excludedPackages = excludedPackages;
 	}
 
+	public List<String> getIncludedMethodNamePatterns() {
+		return includedMethodNamePatterns;
+	}
+
+	public void setIncludedMethodNamePatterns(List<String> includedMethodNamePatterns) {
+		this.includedMethodNamePatterns = includedMethodNamePatterns;
+	}
+
+	public List<String> getExcludedMethodNamePatterns() {
+		return excludedMethodNamePatterns;
+	}
+
+	public void setExcludedMethodNamePatterns(List<String> excludedMethodNamePatterns) {
+		this.excludedMethodNamePatterns = excludedMethodNamePatterns;
+	}
+
 	public List<String> getIncludedEngines() {
 		return this.includedEngines;
 	}
@@ -274,4 +293,12 @@ public class TestDiscoveryOptions {
 		this.configurationParameters = configurationParameters;
 	}
 
+	public List<String> getConfigurationParametersResources() {
+		return this.configurationParametersResources;
+	}
+
+	public TestDiscoveryOptions setConfigurationParametersResources(List<String> configurationParametersResources) {
+		this.configurationParametersResources = configurationParametersResources;
+		return this;
+	}
 }

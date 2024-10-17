@@ -10,7 +10,6 @@
 
 package org.junit.jupiter.engine.descriptor;
 
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apiguardian.api.API.Status.INTERNAL;
 import static org.junit.jupiter.engine.descriptor.ExtensionUtils.populateNewExtensionRegistryFromExtendWithAnnotation;
@@ -19,9 +18,9 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.apiguardian.api.API;
-import org.junit.jupiter.api.extension.ExecutableInvoker;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.TestInstances;
 import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
@@ -74,16 +73,16 @@ public class TestTemplateTestDescriptor extends MethodBasedTestDescriptor implem
 	// --- Node ----------------------------------------------------------------
 
 	@Override
-	public JupiterEngineExecutionContext prepare(JupiterEngineExecutionContext context) throws Exception {
+	public JupiterEngineExecutionContext prepare(JupiterEngineExecutionContext context) {
 		MutableExtensionRegistry registry = populateNewExtensionRegistryFromExtendWithAnnotation(
 			context.getExtensionRegistry(), getTestMethod());
 
 		// The test instance should be properly maintained by the enclosing class's ExtensionContext.
 		TestInstances testInstances = context.getExtensionContext().getTestInstances().orElse(null);
 
-		ExecutableInvoker executableInvoker = new DefaultExecutableInvoker(context);
 		ExtensionContext extensionContext = new TestTemplateExtensionContext(context.getExtensionContext(),
-			context.getExecutionListener(), this, context.getConfiguration(), testInstances, executableInvoker);
+			context.getExecutionListener(), this, context.getConfiguration(), testInstances,
+			it -> new DefaultExecutableInvoker(it, registry));
 
 		// @formatter:off
 		return context.extend()
@@ -101,16 +100,34 @@ public class TestTemplateTestDescriptor extends MethodBasedTestDescriptor implem
 		List<TestTemplateInvocationContextProvider> providers = validateProviders(extensionContext,
 			context.getExtensionRegistry());
 		AtomicInteger invocationIndex = new AtomicInteger();
-		// @formatter:off
-		providers.stream()
-				.flatMap(provider -> provider.provideTestTemplateInvocationContexts(extensionContext))
-				.map(invocationContext -> createInvocationTestDescriptor(invocationContext, invocationIndex.incrementAndGet()))
-				.filter(Optional::isPresent)
-				.map(Optional::get)
-				.forEach(invocationTestDescriptor -> execute(dynamicTestExecutor, invocationTestDescriptor));
-		// @formatter:on
-		validateWasAtLeastInvokedOnce(invocationIndex.get(), providers);
+		for (TestTemplateInvocationContextProvider provider : providers) {
+			executeForProvider(provider, invocationIndex, dynamicTestExecutor, extensionContext);
+		}
 		return context;
+	}
+
+	private void executeForProvider(TestTemplateInvocationContextProvider provider, AtomicInteger invocationIndex,
+			DynamicTestExecutor dynamicTestExecutor, ExtensionContext extensionContext) {
+
+		int initialValue = invocationIndex.get();
+
+		try (Stream<TestTemplateInvocationContext> stream = invocationContexts(provider, extensionContext)) {
+			stream.forEach(invocationContext -> toTestDescriptor(invocationContext, invocationIndex.incrementAndGet()) //
+					.ifPresent(testDescriptor -> execute(dynamicTestExecutor, testDescriptor)));
+		}
+
+		Preconditions.condition(
+			invocationIndex.get() != initialValue
+					|| provider.mayReturnZeroTestTemplateInvocationContexts(extensionContext),
+			String.format(
+				"Provider [%s] did not provide any invocation contexts, but was expected to do so. "
+						+ "You may override mayReturnZeroTestTemplateInvocationContexts() to allow this.",
+				provider.getClass().getSimpleName()));
+	}
+
+	private static Stream<TestTemplateInvocationContext> invocationContexts(
+			TestTemplateInvocationContextProvider provider, ExtensionContext extensionContext) {
+		return provider.provideTestTemplateInvocationContexts(extensionContext);
 	}
 
 	private List<TestTemplateInvocationContextProvider> validateProviders(ExtensionContext extensionContext,
@@ -127,8 +144,7 @@ public class TestTemplateTestDescriptor extends MethodBasedTestDescriptor implem
 				TestTemplateInvocationContextProvider.class.getSimpleName(), getTestMethod()));
 	}
 
-	private Optional<TestDescriptor> createInvocationTestDescriptor(TestTemplateInvocationContext invocationContext,
-			int index) {
+	private Optional<TestDescriptor> toTestDescriptor(TestTemplateInvocationContext invocationContext, int index) {
 		UniqueId uniqueId = getUniqueId().append(TestTemplateInvocationTestDescriptor.SEGMENT_TYPE, "#" + index);
 		if (getDynamicDescendantFilter().test(uniqueId, index - 1)) {
 			return Optional.of(new TestTemplateInvocationTestDescriptor(uniqueId, getTestClass(), getTestMethod(),
@@ -141,15 +157,4 @@ public class TestTemplateTestDescriptor extends MethodBasedTestDescriptor implem
 		testDescriptor.setParent(this);
 		dynamicTestExecutor.execute(testDescriptor);
 	}
-
-	private void validateWasAtLeastInvokedOnce(int invocationIndex,
-			List<TestTemplateInvocationContextProvider> providers) {
-
-		Preconditions.condition(invocationIndex > 0,
-			() -> "None of the supporting " + TestTemplateInvocationContextProvider.class.getSimpleName() + "s "
-					+ providers.stream().map(provider -> provider.getClass().getSimpleName()).collect(
-						joining(", ", "[", "]"))
-					+ " provided a non-empty stream");
-	}
-
 }

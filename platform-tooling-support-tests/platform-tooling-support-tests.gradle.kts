@@ -1,6 +1,7 @@
+
 import com.gradle.develocity.agent.gradle.internal.test.TestDistributionConfigurationInternal
+import junitbuild.extensions.capitalized
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
-import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.jvm.toolchain.internal.NoToolchainAvailableException
 import org.gradle.kotlin.dsl.support.listFilesOrdered
 import java.time.Duration
@@ -142,8 +143,10 @@ tasks.test {
 	jvmArgumentProviders += JarPath(project, antJarsClasspath.get(), "antJars")
 	jvmArgumentProviders += MavenDistribution(project, unzipMavenDistribution, mavenDistributionDir)
 
-	(options as JUnitPlatformOptions).apply {
-		includeEngines("archunit")
+	if (buildParameters.javaToolchain.version.getOrElse(21) < 24) {
+		(options as JUnitPlatformOptions).apply {
+			includeEngines("archunit")
+		}
 	}
 
 	inputs.apply {

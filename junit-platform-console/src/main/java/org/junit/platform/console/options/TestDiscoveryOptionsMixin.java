@@ -202,6 +202,16 @@ class TestDiscoveryOptionsMixin {
 		@Option(names = { "-exclude-package" }, arity = "1", hidden = true)
 		private final List<String> excludePackages2 = new ArrayList<>();
 
+		@Option(names = {
+				"--include-methodname" }, paramLabel = "PATTERN", arity = "1", description = "Provide a regular expression to include only methods whose fully qualified names without parameters match. " //
+						+ "When this option is repeated, all patterns will be combined using OR semantics.")
+		private List<String> includeMethodNamePatterns = new ArrayList<>();
+
+		@Option(names = {
+				"--exclude-methodname" }, paramLabel = "PATTERN", arity = "1", description = "Provide a regular expression to exclude those methods whose fully qualified names without parameters match. " //
+						+ "When this option is repeated, all patterns will be combined using OR semantics.")
+		private List<String> excludeMethodNamePatterns = new ArrayList<>();
+
 		@Option(names = { "-t",
 				"--include-tag" }, paramLabel = "TAG", arity = "1", description = "Provide a tag or tag expression to include only tests whose tags match. "
 						+ //
@@ -239,6 +249,8 @@ class TestDiscoveryOptionsMixin {
 			result.setExcludedClassNamePatterns(merge(this.excludeClassNamePatterns, this.excludeClassNamePatterns2));
 			result.setIncludedPackages(merge(this.includePackages, this.includePackages2));
 			result.setExcludedPackages(merge(this.excludePackages, this.excludePackages2));
+			result.setIncludedMethodNamePatterns(new ArrayList<>(this.includeMethodNamePatterns));
+			result.setExcludedMethodNamePatterns(new ArrayList<>(this.excludeMethodNamePatterns));
 			result.setIncludedTagExpressions(merge(this.includedTags, this.includedTags2));
 			result.setExcludedTagExpressions(merge(this.excludedTags, this.excludedTags2));
 			result.setIncludedEngines(merge(this.includedEngines, this.includedEngines2));
@@ -259,6 +271,10 @@ class TestDiscoveryOptionsMixin {
 
 		// Implementation note: the @Option annotation is on a setter method to allow validation.
 		private final Map<String, String> configurationParameters = new LinkedHashMap<>();
+
+		@Option(names = {
+				"--config-resource" }, paramLabel = "PATH", arity = "1", description = "Set configuration parameters for test discovery and execution via a classpath resource. This option can be repeated.")
+		private List<String> configurationParametersResources = new ArrayList<>();
 
 		@CommandLine.Spec
 		private CommandLine.Model.CommandSpec spec;
@@ -296,6 +312,7 @@ class TestDiscoveryOptionsMixin {
 
 		private void applyTo(TestDiscoveryOptions result) {
 			result.setAdditionalClasspathEntries(merge(additionalClasspathEntries, additionalClasspathEntries2));
+			result.setConfigurationParametersResources(configurationParametersResources);
 			result.setConfigurationParameters(configurationParameters);
 		}
 	}

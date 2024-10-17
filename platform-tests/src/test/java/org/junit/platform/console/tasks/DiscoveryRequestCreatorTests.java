@@ -179,6 +179,18 @@ class DiscoveryRequestCreatorTests {
 	}
 
 	@Test
+	void convertsMethodNamePatternOptions() {
+		options.setScanClasspath(true);
+		options.setIncludedMethodNamePatterns(List.of(".+#foo.*Bar", ".+#toString", ".+#method.*"));
+		options.setExcludedMethodNamePatterns(List.of(".+#bar.*Foo"));
+		var request = convert();
+		var methodNameFilters = request.getPostDiscoveryFilters();
+		assertThat(methodNameFilters).hasSize(2);
+		assertThat(methodNameFilters.get(0).toString()).contains(".+#foo.*Bar", ".+#toString", ".+#method.*");
+		assertThat(methodNameFilters.get(1).toString()).contains(".+#bar.*Foo");
+	}
+
+	@Test
 	void convertsTagOptions() {
 		options.setScanClasspath(true);
 		options.setIncludedTagExpressions(List.of("fast", "medium", "slow"));
@@ -328,6 +340,22 @@ class DiscoveryRequestCreatorTests {
 		assertThat(configurationParameters.size()).isEqualTo(2);
 		assertThat(configurationParameters.get("foo")).contains("bar");
 		assertThat(configurationParameters.getBoolean("baz")).contains(true);
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	void convertsConfigurationParametersResources() {
+		options.setScanClasspath(true);
+		options.setConfigurationParameters(mapOf(entry("foo", "bar"), entry("com.example.prop.first", "baz")));
+		options.setConfigurationParametersResources(List.of("config-test.properties"));
+
+		var request = convert();
+		var configurationParameters = request.getConfigurationParameters();
+
+		assertThat(configurationParameters.size()).isEqualTo(2);
+		assertThat(configurationParameters.get("foo")).contains("bar");
+		assertThat(configurationParameters.get("com.example.prop.first")).contains("baz");
+		assertThat(configurationParameters.get("com.example.prop.second")).contains("second value");
 	}
 
 	private LauncherDiscoveryRequest convert() {

@@ -15,19 +15,13 @@ env:
 jobs:
   Linux:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # required for submitting a dependency graph
     steps:
     - name: Check out repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       with:
         fetch-depth: 1
-    - name: Install Graphviz
-      run: |
-        sudo apt-get update
-        sudo apt-get install graphviz
     - name: Install GraalVM
-      uses: graalvm/setup-graalvm@v1
+      uses: graalvm/setup-graalvm@6f327093bb6a42fe5eac053d21b168c46aa46f22 # v1
       with:
         distribution: graalvm-community
         version: 'latest'
@@ -38,24 +32,20 @@ jobs:
       with:
         arguments: |
           -Ptesting.enableJaCoCo \
+          :platform-tooling-support-tests:test \
           build \
-          jacocoRootReport
+          jacocoRootReport \
+          --configuration-cache
     - name: Upload to Codecov.io
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-    - name: Run Asciidoctor
-      uses: ./.github/actions/run-gradle
-      with:
-        arguments: |
-          prepareDocsForUploadToGhPages \
-          --no-configuration-cache
 
   Windows:
     runs-on: windows-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       with:
         fetch-depth: 1
     - name: Build
@@ -65,7 +55,7 @@ jobs:
     runs-on: macos-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       with:
         fetch-depth: 1
     - name: Build
@@ -81,7 +71,7 @@ jobs:
     if: github.event_name == 'push' && github.repository == 'junit-team/junit5' && (startsWith(github.ref, 'refs/heads/releases/') || github.ref == 'refs/heads/main')
     steps:
     - name: Check out repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       with:
         fetch-depth: 1
     - name: Publish
@@ -92,36 +82,40 @@ jobs:
       with:
         arguments: |
           publish -x check \
-          prepareGitHubAttestation \
-          --no-configuration-cache
+          prepareGitHubAttestation
     - name: Generate build provenance attestations
-      uses: actions/attest-build-provenance@bdd51370e0416ac948727f861e03c2f05d32d78e # v1.3.2
+      uses: actions/attest-build-provenance@1c608d11d69870c2092266b3f9a6f3abbf17002c # v1.4.3
       with:
         subject-path: documentation/build/attestation/*.jar
 
-  update_documentation:
-    name: Update Snapshot Documentation
+  documentation:
+    name: Build Documentation
     concurrency:
-      group: github-pages
+      group: github-pages-${{ github.ref }}
       cancel-in-progress: true
     needs: Linux
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.repository == 'junit-team/junit5' && github.ref == 'refs/heads/main'
     steps:
     - name: Check out repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       with:
         fetch-depth: 1
     - name: Install Graphviz
       run: |
         sudo apt-get update
         sudo apt-get install graphviz
+    - name: Build Documentation
+      uses: ./.github/actions/run-gradle
+      with:
+        arguments: |
+          prepareDocsForUploadToGhPages \
+          -Dscan.tag.Documentation
     - name: Upload Documentation
+      if: github.event_name == 'push' && github.repository == 'junit-team/junit5' && github.ref == 'refs/heads/main'
       uses: ./.github/actions/run-gradle
       with:
         arguments: |
           gitPublishPush \
-          -Dscan.tag.Documentation \
-          --no-configuration-cache
+          -Dscan.tag.Documentation
       env:
         GRGIT_USER: ${{ secrets.GH_TOKEN }}

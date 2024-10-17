@@ -42,6 +42,8 @@ tasks.withType<Test>().configureEach {
 		}
 	}
 	systemProperty("java.util.logging.manager", "org.apache.logging.log4j.jul.LogManager")
+	// https://github.com/gradle/gradle/issues/30554
+	systemProperty("log4j2.julLoggerAdapter", "org.apache.logging.log4j.jul.CoreLoggerAdapter")
 	// Avoid overhead (see https://logging.apache.org/log4j/2.x/manual/jmx.html#enabling-jmx)
 	systemProperty("log4j2.disableJmx", "true")
 	// Required until ASM officially supports the JDK 14
@@ -76,10 +78,7 @@ dependencies {
 	testImplementation(dependencyFromLibs("assertj"))
 	testImplementation(dependencyFromLibs("mockito"))
 	testImplementation(dependencyFromLibs("testingAnnotations"))
-
-	if (!project.name.startsWith("junit-jupiter")) {
-		testImplementation(project(":junit-jupiter"))
-	}
+	testImplementation(project(":junit-jupiter"))
 
 	testRuntimeOnly(project(":junit-platform-engine"))
 	testRuntimeOnly(project(":junit-platform-jfr"))

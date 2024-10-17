@@ -63,6 +63,7 @@ class TempDirectoryDemo {
 	}
 	// end::user_guide_multiple_directories[]
 
+	@SuppressWarnings("JUnitMalformedDeclaration")
 	static
 	// tag::user_guide_field_injection[]
 	class SharedTempDirectoryDemo {
@@ -87,6 +88,7 @@ class TempDirectoryDemo {
 	}
 	// end::user_guide_field_injection[]
 
+	@SuppressWarnings("JUnitMalformedDeclaration")
 	static
 	// tag::user_guide_cleanup_mode[]
 	class CleanupModeDemo {
@@ -99,6 +101,7 @@ class TempDirectoryDemo {
 	}
 	// end::user_guide_cleanup_mode[]
 
+	@SuppressWarnings("JUnitMalformedDeclaration")
 	static
 	// tag::user_guide_factory_name_prefix[]
 	class TempDirFactoryDemo {
@@ -121,6 +124,7 @@ class TempDirectoryDemo {
 	}
 	// end::user_guide_factory_name_prefix[]
 
+	@SuppressWarnings("JUnitMalformedDeclaration")
 	static
 	// tag::user_guide_factory_jimfs[]
 	class InMemoryTempDirDemo {
@@ -137,7 +141,7 @@ class TempDirectoryDemo {
 			@Override
 			public Path createTempDirectory(AnnotatedElementContext elementContext, ExtensionContext extensionContext)
 					throws IOException {
-				return Files.createTempDirectory(fileSystem.getPath("/"), "junit");
+				return Files.createTempDirectory(fileSystem.getPath("/"), "junit-");
 			}
 
 			@Override
@@ -158,6 +162,7 @@ class TempDirectoryDemo {
 	}
 	// end::user_guide_composed_annotation[]
 
+	@SuppressWarnings("JUnitMalformedDeclaration")
 	static
 	// tag::user_guide_composed_annotation_usage[]
 	class JimfsTempDirAnnotationDemo {

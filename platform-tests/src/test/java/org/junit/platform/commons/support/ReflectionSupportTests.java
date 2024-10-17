@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.platform.commons.support.PreconditionAssertions.assertPreconditionViolationException;
 import static org.junit.platform.commons.support.PreconditionAssertions.assertPreconditionViolationExceptionForString;
+import static org.junit.platform.commons.util.ClassLoaderUtils.getDefaultClassLoader;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -119,6 +120,31 @@ class ReflectionSupportTests {
 		return tests;
 	}
 
+	/**
+	 * @since 1.12
+	 */
+	@Test
+	void tryToGetResourcesPreconditions() {
+		assertPreconditionViolationExceptionForString("Resource name", () -> ReflectionSupport.tryToGetResources(null));
+		assertPreconditionViolationExceptionForString("Resource name", () -> ReflectionSupport.tryToGetResources(""));
+		assertPreconditionViolationException("Class loader",
+			() -> ReflectionSupport.tryToGetResources("default-package.resource", null));
+		assertPreconditionViolationException("Class loader",
+			() -> ReflectionSupport.tryToGetResources("default-package.resource", null));
+	}
+
+	/**
+	 * @since 1.12
+	 */
+	@Test
+	void tryToGetResources() {
+		assertEquals(ReflectionUtils.tryToGetResources("default-package.resource").toOptional(),
+			ReflectionSupport.tryToGetResources("default-package.resource").toOptional());
+		assertEquals(
+			ReflectionUtils.tryToGetResources("default-package.resource", getDefaultClassLoader()).toOptional(), //
+			ReflectionSupport.tryToGetResources("default-package.resource", getDefaultClassLoader()).toOptional());
+	}
+
 	@Test
 	void findAllClassesInClasspathRootPreconditions() {
 		var path = Path.of(".").toUri();
@@ -142,8 +168,9 @@ class ReflectionSupportTests {
 		for (var path : paths) {
 			var root = path.toUri();
 			tests.add(DynamicTest.dynamicTest(createDisplayName(root),
-				() -> assertEquals(ReflectionUtils.findAllResourcesInClasspathRoot(root, allResources),
-					ReflectionSupport.findAllResourcesInClasspathRoot(root, allResources))));
+				() -> assertThat(ReflectionUtils.findAllResourcesInClasspathRoot(root, allResources)) //
+						.containsExactlyElementsOf(
+							ReflectionSupport.findAllResourcesInClasspathRoot(root, allResources))));
 		}
 		return tests;
 	}
@@ -172,8 +199,9 @@ class ReflectionSupportTests {
 		for (var path : paths) {
 			var root = path.toUri();
 			tests.add(DynamicTest.dynamicTest(createDisplayName(root),
-				() -> assertEquals(ReflectionUtils.streamAllResourcesInClasspathRoot(root, allResources).toList(),
-					ReflectionSupport.streamAllResourcesInClasspathRoot(root, allResources).toList())));
+				() -> assertThat(ReflectionUtils.streamAllResourcesInClasspathRoot(root, allResources)) //
+						.containsExactlyElementsOf(
+							ReflectionSupport.streamAllResourcesInClasspathRoot(root, allResources).toList())));
 		}
 		return tests;
 	}

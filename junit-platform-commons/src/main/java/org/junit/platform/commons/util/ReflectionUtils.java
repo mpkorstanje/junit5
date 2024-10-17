@@ -19,6 +19,7 @@ import static org.apiguardian.api.API.Status.DEPRECATED;
 import static org.apiguardian.api.API.Status.INTERNAL;
 import static org.apiguardian.api.API.Status.STABLE;
 import static org.junit.platform.commons.util.CollectionUtils.toUnmodifiableList;
+import static org.junit.platform.commons.util.PackageNameUtils.getPackageName;
 import static org.junit.platform.commons.util.ReflectionUtils.HierarchyTraversalMode.BOTTOM_UP;
 import static org.junit.platform.commons.util.ReflectionUtils.HierarchyTraversalMode.TOP_DOWN;
 
@@ -35,6 +36,8 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -186,6 +189,7 @@ public final class ReflectionUtils {
 			long.class,
 			float.class,
 			double.class,
+			void.class,
 
 			boolean[].class,
 			byte[].class,
@@ -213,6 +217,7 @@ public final class ReflectionUtils {
 			Long.class,
 			Float.class,
 			Double.class,
+			Void.class,
 			String.class,
 
 			Boolean[].class,
@@ -246,7 +251,7 @@ public final class ReflectionUtils {
 
 		classNameToTypeMap = Collections.unmodifiableMap(classNamesToTypes);
 
-		Map<Class<?>, Class<?>> primitivesToWrappers = new IdentityHashMap<>(8);
+		Map<Class<?>, Class<?>> primitivesToWrappers = new IdentityHashMap<>(9);
 
 		primitivesToWrappers.put(boolean.class, Boolean.class);
 		primitivesToWrappers.put(byte.class, Byte.class);
@@ -256,6 +261,7 @@ public final class ReflectionUtils {
 		primitivesToWrappers.put(long.class, Long.class);
 		primitivesToWrappers.put(float.class, Float.class);
 		primitivesToWrappers.put(double.class, Double.class);
+		primitivesToWrappers.put(void.class, Void.class);
 
 		primitiveToWrapperMap = Collections.unmodifiableMap(primitivesToWrappers);
 	}
@@ -890,6 +896,54 @@ public final class ReflectionUtils {
 		});
 	}
 
+	/**
+	 * Try to get {@linkplain Resource resources} by their name, using the
+	 * {@link ClassLoaderUtils#getDefaultClassLoader()}.
+	 *
+	 * <p>See {@link org.junit.platform.commons.support.ReflectionSupport#tryToGetResources(String)}
+	 * for details.
+	 *
+	 * @param classpathResourceName the name of the resources to load; never {@code null} or blank
+	 * @since 1.12
+	 * @see org.junit.platform.commons.support.ReflectionSupport#tryToGetResources(String, ClassLoader)
+	 */
+	@API(status = INTERNAL, since = "1.12")
+	public static Try<Set<Resource>> tryToGetResources(String classpathResourceName) {
+		return tryToGetResources(classpathResourceName, ClassLoaderUtils.getDefaultClassLoader());
+	}
+
+	/**
+	 * Try to get {@linkplain Resource resources} by their name, using the
+	 * supplied {@link ClassLoader}.
+	 *
+	 * <p>See {@link org.junit.platform.commons.support.ReflectionSupport#tryToGetResources(String, ClassLoader)}
+	 * for details.
+	 *
+	 * @param classpathResourceName the name of the resources to load; never {@code null} or blank
+	 * @param classLoader the {@code ClassLoader} to use; never {@code null}
+	 * @since 1.12
+	 */
+	@API(status = INTERNAL, since = "1.12")
+	public static Try<Set<Resource>> tryToGetResources(String classpathResourceName, ClassLoader classLoader) {
+		Preconditions.notBlank(classpathResourceName, "Resource name must not be null or blank");
+		Preconditions.notNull(classLoader, "Class loader must not be null");
+		boolean startsWithSlash = classpathResourceName.startsWith("/");
+		String canonicalClasspathResourceName = (startsWithSlash ? classpathResourceName.substring(1)
+				: classpathResourceName);
+
+		return Try.call(() -> {
+			List<URL> resources = Collections.list(classLoader.getResources(canonicalClasspathResourceName));
+			return resources.stream().map(url -> {
+				try {
+					return new ClasspathResource(canonicalClasspathResourceName, url.toURI());
+				}
+				catch (URISyntaxException e) {
+					throw ExceptionUtils.throwAsUncheckedException(e);
+				}
+			}).collect(toCollection(LinkedHashSet::new));
+		});
+	}
+
 	private static Class<?> loadArrayType(ClassLoader classLoader, String componentTypeName, int dimensions)
 			throws ClassNotFoundException {
 
@@ -933,21 +987,22 @@ public final class ReflectionUtils {
 	 */
 	public static String getFullyQualifiedMethodName(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
 		Preconditions.notNull(clazz, "Class must not be null");
-		Preconditions.notBlank(methodName, "Method name must not be null or blank");
 
 		return getFullyQualifiedMethodName(clazz.getName(), methodName, ClassUtils.nullSafeToString(parameterTypes));
 	}
 
 	/**
 	 * Build the <em>fully qualified method name</em> for the method described by the
-	 * supplied class, method name, and parameter types.
+	 * supplied class name, method name, and parameter types.
 	 *
 	 * <p>Note that the class is not necessarily the class in which the method is
 	 * declared.
 	 *
-	 * @param className the name of the class from which the method should be referenced; never {@code null}
+	 * @param className the name of the class from which the method should be referenced;
+	 * never {@code null}
 	 * @param methodName the name of the method; never {@code null} or blank
-	 * @param parameterTypeNames the parameter type names of the method; may be empty but not {@code null}
+	 * @param parameterTypeNames the parameter type names of the method; may be
+	 * empty but not {@code null}
 	 * @return fully qualified method name; never {@code null}
 	 * @since 1.11
 	 */
@@ -1899,7 +1954,7 @@ public final class ReflectionUtils {
 	}
 
 	private static boolean declaredInSamePackage(Method m1, Method m2) {
-		return m1.getDeclaringClass().getPackage().getName().equals(m2.getDeclaringClass().getPackage().getName());
+		return getPackageName(m1.getDeclaringClass()).equals(getPackageName(m2.getDeclaringClass()));
 	}
 
 	/**

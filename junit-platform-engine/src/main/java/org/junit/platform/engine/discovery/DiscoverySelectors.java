@@ -10,6 +10,7 @@
 
 package org.junit.platform.engine.discovery;
 
+import static java.util.stream.Collectors.toList;
 import static org.apiguardian.api.API.Status.EXPERIMENTAL;
 import static org.apiguardian.api.API.Status.STABLE;
 import static org.junit.platform.commons.util.CollectionUtils.toUnmodifiableList;
@@ -29,6 +30,8 @@ import java.util.stream.Stream;
 
 import org.apiguardian.api.API;
 import org.junit.platform.commons.PreconditionViolationException;
+import org.junit.platform.commons.support.ReflectionSupport;
+import org.junit.platform.commons.support.Resource;
 import org.junit.platform.commons.util.Preconditions;
 import org.junit.platform.commons.util.ReflectionUtils;
 import org.junit.platform.engine.DiscoverySelector;
@@ -281,6 +284,7 @@ public final class DiscoverySelectors {
 	 * @param classpathResourceName the name of the classpath resource; never
 	 * {@code null} or blank
 	 * @see #selectClasspathResource(String, FilePosition)
+	 * @see #selectClasspathResource(Set)
 	 * @see ClasspathResourceSelector
 	 * @see ClassLoader#getResource(String)
 	 * @see ClassLoader#getResourceAsStream(String)
@@ -310,6 +314,7 @@ public final class DiscoverySelectors {
 	 * {@code null} or blank
 	 * @param position the position inside the classpath resource; may be {@code null}
 	 * @see #selectClasspathResource(String)
+	 * @see #selectClasspathResource(Set)
 	 * @see ClasspathResourceSelector
 	 * @see ClassLoader#getResource(String)
 	 * @see ClassLoader#getResourceAsStream(String)
@@ -317,8 +322,41 @@ public final class DiscoverySelectors {
 	 */
 	public static ClasspathResourceSelector selectClasspathResource(String classpathResourceName,
 			FilePosition position) {
-		Preconditions.notBlank(classpathResourceName, "Classpath resource name must not be null or blank");
+		Preconditions.notBlank(classpathResourceName, "classpath resource name must not be null or blank");
 		return new ClasspathResourceSelector(classpathResourceName, position);
+	}
+
+	/**
+	 * Create a {@code ClasspathResourceSelector} for the supplied classpath
+	 * resources.
+	 *
+	 * <p>Since {@linkplain org.junit.platform.engine.TestEngine engines} are not
+	 * expected to modify the classpath, the supplied resource must be on the
+	 * classpath of the
+	 * {@linkplain Thread#getContextClassLoader() context class loader} of the
+	 * {@linkplain Thread thread} that uses the resulting selector.
+	 *
+	 * <p>Note: Since Java 9, all resources are on the module path. Either in
+	 * named or unnamed modules. These resources are also considered to be
+	 * classpath resources.
+	 *
+	 * @param classpathResources a set of classpath resources; never
+	 * {@code null} or empty. All resources must have the same name, may not
+	 * be {@code null} or blank.
+	 * @since 1.12
+	 * @see #selectClasspathResource(String, FilePosition)
+	 * @see #selectClasspathResource(String)
+	 * @see ClasspathResourceSelector
+	 * @see ReflectionSupport#tryToGetResources(String)
+	 */
+	@API(status = EXPERIMENTAL, since = "1.12")
+	public static ClasspathResourceSelector selectClasspathResource(Set<Resource> classpathResources) {
+		Preconditions.notEmpty(classpathResources, "classpath resources must not be null or empty");
+		Preconditions.containsNoNullElements(classpathResources, "individual classpath resources must not be null");
+		List<String> resourceNames = classpathResources.stream().map(Resource::getName).distinct().collect(toList());
+		Preconditions.condition(resourceNames.size() == 1, "all classpath resources must have the same name");
+		Preconditions.notBlank(resourceNames.get(0), "classpath resource names must not be null or blank");
+		return new ClasspathResourceSelector(classpathResources);
 	}
 
 	/**
@@ -930,8 +968,8 @@ public final class DiscoverySelectors {
 	 *
 	 * @param parentSelector the parent selector to select iterations for; never
 	 * {@code null}
-	 * @param iterationIndices the iteration indices to select; never
-	 * {@code null} or empty
+	 * @param iterationIndices the iteration indices to select; never {@code null}
+	 * or empty
 	 * @since 1.9
 	 * @see IterationSelector
 	 */
@@ -943,11 +981,12 @@ public final class DiscoverySelectors {
 	}
 
 	/**
-	 * Parse the supplied string representation of a
-	 * {@link DiscoverySelectorIdentifier}.
+	 * Parse the supplied string representation of a {@link DiscoverySelectorIdentifier}.
 	 *
 	 * @param identifier the string representation of a {@code DiscoverySelectorIdentifier};
 	 * never {@code null} or blank
+	 * @return an {@link Optional} containing the corresponding {@link DiscoverySelector};
+	 * never {@code null} but potentially empty
 	 * @since 1.11
 	 * @see DiscoverySelectorIdentifierParser
 	 */
@@ -961,6 +1000,8 @@ public final class DiscoverySelectors {
 	 *
 	 * @param identifier the {@code DiscoverySelectorIdentifier} to parse;
 	 * never {@code null}
+	 * @return an {@link Optional} containing the corresponding {@link DiscoverySelector};
+	 * never {@code null} but potentially empty
 	 * @since 1.11
 	 * @see DiscoverySelectorIdentifierParser
 	 */
@@ -975,6 +1016,8 @@ public final class DiscoverySelectors {
 	 *
 	 * @param identifiers the string representations of
 	 * {@code DiscoverySelectorIdentifiers} to parse; never {@code null}
+	 * @return a stream of the corresponding {@link DiscoverySelector DiscoverySelectors};
+	 * never {@code null} but potentially empty
 	 * @since 1.11
 	 * @see DiscoverySelectorIdentifierParser
 	 */
@@ -989,6 +1032,8 @@ public final class DiscoverySelectors {
 	 *
 	 * @param identifiers the {@code DiscoverySelectorIdentifiers} to parse;
 	 * never {@code null}
+	 * @return a stream of the corresponding {@link DiscoverySelector DiscoverySelectors};
+	 * never {@code null} but potentially empty
 	 * @since 1.11
 	 * @see DiscoverySelectorIdentifierParser
 	 */
@@ -996,4 +1041,5 @@ public final class DiscoverySelectors {
 	public static Stream<? extends DiscoverySelector> parseAll(Collection<DiscoverySelectorIdentifier> identifiers) {
 		return DiscoverySelectorIdentifierParsers.parseAll(identifiers);
 	}
+
 }

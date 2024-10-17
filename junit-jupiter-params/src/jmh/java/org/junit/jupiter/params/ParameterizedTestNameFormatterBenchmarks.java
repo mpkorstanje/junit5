@@ -44,18 +44,21 @@ public class ParameterizedTestNameFormatterBenchmarks {
 
 	@Benchmark
 	public void formatTestNames(Blackhole blackhole) throws Exception {
+		var method = TestCase.class.getDeclaredMethod("parameterizedTest", int.class);
 		var formatter = new ParameterizedTestNameFormatter(
 			ParameterizedTest.DISPLAY_NAME_PLACEHOLDER + " " + ParameterizedTest.DEFAULT_DISPLAY_NAME + " ({0})",
-			"displayName",
-			new ParameterizedTestMethodContext(TestCase.class.getDeclaredMethod("parameterizedTest", int.class)), 512);
+			"displayName", new ParameterizedTestMethodContext(method, method.getAnnotation(ParameterizedTest.class)),
+			512);
 		for (int i = 0; i < argumentsList.size(); i++) {
 			Arguments arguments = argumentsList.get(i);
 			blackhole.consume(formatter.format(i, arguments, arguments.get()));
 		}
 	}
 
+	@SuppressWarnings("JUnitMalformedDeclaration")
 	static class TestCase {
 		@SuppressWarnings("unused")
+		@ParameterizedTest
 		void parameterizedTest(int param) {
 		}
 	}
